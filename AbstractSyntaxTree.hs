@@ -21,7 +21,7 @@ data Statement = AssignStatement ID Expression
 data Expression = NumExpression Number
                 | IDExpression ID
                 | FunctionExpression ID Arguments
-                | OperatorExpresssion Expression Op Expression
+                | OperatorExpression Expression Op Expression
                deriving Show
                
 data Statements = Statements [Statement]
