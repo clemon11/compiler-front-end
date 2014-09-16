@@ -1,0 +1,5 @@
+FUNCTION main(arg1,arg2)
+VARS var1;
+BEGIN
+  var1 = arg1;
+END

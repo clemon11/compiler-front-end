@@ -62,7 +62,7 @@ myParse :: Parser a -> String -> Either ParseError a
 myParse p s = parse (p <+-> eof) "myparser" s
               
 program :: Parser Program
-program = spaces <-+> liftM Program (many function)
+program = spaces0 <-+> liftM Program (many function)
 
 function :: Parser Function
 function = tokenFUNCTION <-+> liftM4 Function ident arguments variables block 
