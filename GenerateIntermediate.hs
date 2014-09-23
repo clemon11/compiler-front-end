@@ -7,17 +7,31 @@ import Data.List -- unfoldr
 import Data.Char (isSpace) -- for stripping leading whitespace
 
 
-------- Convert AST to String representing Intermediate Code ---------
 
--- TODO:
--- left = "( "; loadIntoNextReg id; etc
--- tidy up generateIntermediate, arguments, statements, psStatements
+----------------------common instructions-------------------------
+
+register :: Integer -> String
+register r = "r" ++ (show r)
+
+loadVarIntoReg :: Integer -> ID -> String
+loadVarIntoReg r (ID id) = " (ld " ++ (register r) ++ " " ++ id ++ ") "
+
+loadConstIntoReg :: Integer -> Number -> String
+loadConstIntoReg r (Number n) = " (lc " ++ (register r) ++ " " ++ (show n) ++ ") "
+
+storeInVar :: ID -> Integer -> String
+storeInVar (ID id) r = " (st " ++ id ++ " " ++ (register r) ++ ") "
+
+
+--------Convert AST to String representing Intermediate Code----------
+
 
 generateIntermediate :: Program -> String
 generateIntermediate (Program fs) 
    = "( " ++ (foldr (\(Function (ID id) a v s) 
                 -> (++) ("( " ++ id ++ " (" ++ (arguments a) ++ ") " ++ (statements s) ++ " )" ))
            "" fs) ++ " )"
+
 
 arguments :: Arguments -> String
 arguments (Arguments as) = dropWhile isSpace (foldr (\(ID a) -> (++) (" " ++ a)) "" as)
@@ -42,6 +56,9 @@ statement state stmt
                          (ReturnStatement id)         -> returnId id state
 
 
+-------------------------------------------
+
+
 assign :: ID -> Expression -> State -> (State, String)
 assign id' exp state
     = case exp of (NumExpression n)                 -> assignNum id' exp state
@@ -50,46 +67,39 @@ assign id' exp state
                   (OperatorExpression exp1 op exp2) -> assignOp id' exp state
 
 
----------------------------------------------
-
-
 assignNum :: ID -> Expression -> State -> (State, String)
-assignNum (ID id) (NumExpression (Number num)) state 
+assignNum id' (NumExpression n') state 
      = let r = nextRegister state in
-           (updateRegisters state, " (lc r" ++ (show r) ++ " " ++ (show num) ++ ") (st " ++ id ++ " r" ++ (show r) ++ ") ")
-
-
-
----------------------------------------------
-
+           (updateRegisters state, (loadConstIntoReg r n') ++ (storeInVar id' r))
 
 
 assignId :: ID -> Expression -> State -> (State, String)
-assignId (ID id1) (IDExpression (ID id2)) state 
+assignId id' (IDExpression id'') state 
      = let r = nextRegister state in
-           (updateRegisters state, " (ld r" ++ (show r) ++ " " ++ id2 ++ ") (st " ++ id1 ++ " r" ++ (show r) ++ ") ")
-
-
----------------------------------------------
+           (updateRegisters state, (loadVarIntoReg r id') ++ (storeInVar id'' r))
 
 
 assignFunc :: ID -> Expression -> State -> (State, String)
-assignFunc (ID id) (FunctionExpression id' (Arguments args)) state 
-     = let (state', str) = (bind (loadArgs args state) (callFunc id' args)) in 
-           (state', str ++ " (st " ++ id ++ " r" ++ (show (prevRegister state')) ++ ") ")
+assignFunc id' (FunctionExpression id'' (Arguments args)) state 
+     = let (state', str) = (bind (loadArgs args state) (callFunc id'' args)) in 
+           (state', str ++ (storeInVar id'' (prevRegister state')))
+
 
 loadArgs :: [ID] -> State -> (State, String)
 loadArgs [] state           = (state, "")
 loadArgs (arg:args) state   = bind (loadArg arg state) (loadArgs args)
 
+
 loadArg :: ID -> State -> (State, String)
-loadArg (ID id) state = (updateRegisters state, (" (ld r" ++ (show (nextRegister state)) ++ " " ++ id ++ ") "))
+loadArg id' state = (updateRegisters state, (loadVarIntoReg (nextRegister state) id'))
+
 
 callFunc :: ID -> [ID] -> State -> (State, String)
 callFunc (ID id) ids state 
       = let n = toInteger (length ids) 
             r = prevRegister state 
-        in (updateRegisters state, " (call r" ++ (show (r+1)) ++ " " ++ id ++ (listRegisters (r-n+1) (r)) ++ ")")
+        in (updateRegisters state, " (call " ++ (register (r+1)) ++ " " ++ id ++ (listRegisters (r-n+1) (r)) ++ ")")
+
 
 listRegisters :: Integer -> Integer -> String
 listRegisters lo hi 
@@ -99,8 +109,6 @@ listRegisters lo hi
                (lo,hi)) 
 
 
----------------------------------------------
-
 --- this generates redundant (st id' <REG>) expressions.
 --- work out how to remove these if time allows...
 assignOp :: ID -> Expression -> State -> (State, String)
@@ -108,8 +116,9 @@ assignOp id'@(ID id) (OperatorExpression exp1 op exp2) state
   = let (state'@(Used b1 (Registers r1)), s1) = (assign id' exp1 state)
         (state''@(Used b2 (Registers r2)), s2) = (assign id' exp2 state')
     in (updateRegisters state'', 
-        s1 ++ s2 ++ " (" ++ (operator op) ++ " r" ++ (show (nextRegister state'')) 
-        ++ " r" ++ (show r1) ++ " r" ++ (show r2) ++ ") ")
+        s1 ++ s2 ++ " (" ++ (operator op) ++ " " ++ (register (nextRegister state''))
+        ++ " " ++ (register r1) ++ " " ++ (register r2) ++ ") ")
+
 
 operator :: Op -> String
 operator Plus        = "add"
@@ -126,10 +135,9 @@ operator Equals      = "eq"
 
 
 returnId :: ID -> State -> (State, String)
-returnId (ID id) state
+returnId id' state
    = let r = (nextRegister state) 
-     in (updateRegisters state, 
-         "(ld r" ++ (show r) ++ " " ++ id ++ ") (ret r" ++ (show r) ++ ") ")
+     in (updateRegisters state, ((loadVarIntoReg r id') ++ " (ret " ++ (register r) ++ ") "))
 
 
 
@@ -146,17 +154,19 @@ ifThenElse id ss1 ss2 state
 
 
 condition :: ID -> State -> (State, String)
-condition (ID id) state 
+condition id' state 
   = let b1 = nextBlock state
         b2 = b1 + 1
         r  = nextRegister state
-    in (updateRegisters state, 
-        " (ld r" ++ (show r) ++ " " ++ id ++ ") (br r" ++ (show r) ++ " " ++ (show b1) ++ " " ++ (show b2) ++ ") ) ")
+    in (updateRegisters state,
+        (loadVarIntoReg r id') ++ " (br " ++ (register r) ++ " " ++ (show b1) ++ " " ++ (show b2) ++ ") ) ")
+
 
 branch :: Statements -> State -> (State, String)
 branch (Statements ss) state 
   = (updateBlocks state, 
      " (" ++ (show (nextBlock state)) ++ " " ++ (psStatements state ss) ++ ") ")
+
 
 endIf :: State -> (State, String)
 endIf state = (updateBlocks state, " (" ++ (show (nextBlock state)) ++ " ")
