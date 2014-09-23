@@ -19,7 +19,7 @@ data State = Used UsedBlocks UsedRegisters
   deriving Show
 
 updateBlocks :: State -> State
-updateBlocks (Used (Blocks b) r') = (Used (Blocks (b + 1)) r') -- TODO tidy this up
+updateBlocks (Used (Blocks b) r') = (Used (Blocks (b + 1)) r')
 
 updateRegisters :: State -> State
 updateRegisters (Used b' (Registers r)) = (Used b' (Registers (r + 1)))
@@ -32,11 +32,19 @@ nextRegister (Used b' (Registers r)) = r + 1
 prevRegister :: State -> Integer
 prevRegister (Used b' (Registers r)) = r
 
+-- next unassigned block
+nextBlock :: State -> Integer
+nextBlock (Used (Blocks b) r') = b + 1
+
 -- I don't know why I wrote a bind function. It seemed like a good idea at the time
 bind :: (State, String) -> (State -> (State, String)) -> (State, String)
 bind (state, str) f = let (state', str') = f state in (state', (str ++ str'))
 
+
+
 ------- Convert AST to String representing Intermediate Code ---------
+
+
 
 generateIntermediate :: Program -> String
 generateIntermediate ast = "( " ++ ( functions ast ) ++ ")"
@@ -47,11 +55,14 @@ functions (Program fs)
                 -> (++) ("( " ++ id ++ " (" ++ (arguments a) ++ ") " ++ (statements s) ++ " ) " ))
            "" fs 
 
+
 arguments :: Arguments -> String
 arguments (Arguments as) = dropWhile isSpace (foldr (\(ID a) -> (++) (" " ++ a)) "" as)
 
+
 statements :: Statements -> String
 statements (Statements ss) = "(0" ++ (psStatements (Used (Blocks 0) (Registers 0)) ss) ++ ")"
+
 
 psStatements :: State -> [Statement] -> String
 psStatements u [] = ""
@@ -59,10 +70,14 @@ psStatements state (s:ss)
    = let (newState, code) = (statement state s)
      in code ++ (psStatements newState ss)
 
+
 statement :: State -> Statement -> (State, String)
 statement state stmt 
-          = case stmt of (AssignStatement id exp) -> assign id exp state
-                         _                        -> (state, "Unimplemented")
+          = case stmt of (AssignStatement id exp)     -> assign id exp state
+                         (IfStatement id ss)          -> ifThenElse id ss (Statements []) state
+                         (IfElseStatement id ss1 ss2) -> ifThenElse id ss1 ss2 state
+                         (ReturnStatement id)         -> returnId id state
+
 
 assign :: ID -> Expression -> State -> (State, String)
 assign id' exp state
@@ -142,3 +157,43 @@ operator GreaterThan = "gt"
 operator LessThan    = "lt"
 operator Equals      = "eq"
 
+
+
+----------------RETURN---------------------------
+
+
+returnId :: ID -> State -> (State, String)
+returnId (ID id) state
+   = let r = (nextRegister state) 
+     in (updateRegisters state, 
+         "(ld r" ++ (show r) ++ " " ++ id ++ ") (ret r" ++ (show r) ++ ") ")
+
+
+
+-----------------IF-THEN-ELSE--------------------
+-- <HANGING BLOCK>   (ld nextReg id) (br r4 nextBlock nextBlock.nextBlock) )  <END BLOCK>
+-- <BEGIN BLOCK> (nextBlock ( ss1 ) ) <END BLOCK>
+-- <BEGIN BLOCK> (nextBlock.nextBlock ( ss2 ) ) <END BLOCK>
+-- <BEGIN BLOCK> (nextBlock.nextBlock.nextBlock     <HANGING BLOCK>
+
+
+ifThenElse :: ID -> Statements -> Statements -> State -> (State, String)
+ifThenElse id ss1 ss2 state 
+   = bind (bind (bind (bind (state, "") (condition id)) (branch ss1)) (branch ss2)) endIf
+
+
+condition :: ID -> State -> (State, String)
+condition (ID id) state 
+  = let b1 = nextBlock state
+        b2 = b1 + 1
+        r  = nextRegister state
+    in (updateRegisters state, 
+        " (ld r" ++ (show r) ++ " " ++ id ++ ") (br r" ++ (show r) ++ " " ++ (show b1) ++ " " ++ (show b2) ++ ") ) ")
+
+branch :: Statements -> State -> (State, String)
+branch (Statements ss) state 
+  = (updateBlocks state, 
+     " (" ++ (show (nextBlock state)) ++ " " ++ (psStatements state ss) ++ ") ")
+
+endIf :: State -> (State, String)
+endIf state = (updateBlocks state, " (" ++ (show (nextBlock state)) ++ " ")
