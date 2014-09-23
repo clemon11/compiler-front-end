@@ -17,5 +17,5 @@ main = do
 generateCode :: String -> String    
 generateCode text = case checkSemantics (parseProgram text) of 
                Left error -> show error 
-               Right ast -> generateIntermediate ast  --Change this to call your function Caitlin :) and change the type at the top if you need
+               Right ast -> generateIntermediate ast
                

@@ -13,11 +13,14 @@ import Data.Char (isSpace) -- for stripping leading whitespace
 register :: Integer -> String
 register r = "r" ++ (show r)
 
+
 loadVarIntoReg :: Integer -> ID -> String
 loadVarIntoReg r (ID id) = " (ld " ++ (register r) ++ " " ++ id ++ ") "
 
+
 loadConstIntoReg :: Integer -> Number -> String
 loadConstIntoReg r (Number n) = " (lc " ++ (register r) ++ " " ++ (show n) ++ ") "
+
 
 storeInVar :: ID -> Integer -> String
 storeInVar (ID id) r = " (st " ++ id ++ " " ++ (register r) ++ ") "
@@ -28,9 +31,9 @@ storeInVar (ID id) r = " (st " ++ id ++ " " ++ (register r) ++ ") "
 
 generateIntermediate :: Program -> String
 generateIntermediate (Program fs) 
-   = "( " ++ (foldr (\(Function (ID id) a v s) 
-                -> (++) ("( " ++ id ++ " (" ++ (arguments a) ++ ") " ++ (statements s) ++ " )" ))
-           "" fs) ++ " )"
+   = "(" ++ (foldr (\(Function (ID id) a v s) 
+                -> (++) (" (" ++ id ++ " (" ++ (arguments a) ++ ") " ++ (statements s) ++ " ) " ))
+           "" fs) ++ ")"
 
 
 arguments :: Arguments -> String
@@ -61,29 +64,40 @@ statement state stmt
 
 assign :: ID -> Expression -> State -> (State, String)
 assign id' exp state
-    = case exp of (NumExpression n)                 -> assignNum id' exp state
-                  (IDExpression id'')               -> assignId id' exp state
-                  (FunctionExpression id'' args)    -> assignFunc id' exp state 
-                  (OperatorExpression exp1 op exp2) -> assignOp id' exp state
+   = let (state', code) = (processExpression exp state)
+     in (state', code ++ (storeInVar id' (prevRegister state')))
 
 
-assignNum :: ID -> Expression -> State -> (State, String)
-assignNum id' (NumExpression n') state 
-     = let r = nextRegister state in
-           (updateRegisters state, (loadConstIntoReg r n') ++ (storeInVar id' r))
+processExpression :: Expression -> State -> (State, String)
+
+processExpression (NumExpression n') state 
+   = (updateRegisters state, loadConstIntoReg (nextRegister state) n')
+
+processExpression (IDExpression id') state 
+   = (updateRegisters state, loadVarIntoReg (nextRegister state) id')
+
+processExpression (FunctionExpression id' (Arguments args)) state 
+   = bind (loadArgs args state) (callFunc id' args)
+
+processExpression (OperatorExpression exp1 op exp2) state 
+  = let (state'@(Used b1 (Registers r1)), s1) = (processExpression exp1 state)
+        (state''@(Used b2 (Registers r2)), s2) = (processExpression exp2 state')
+    in (updateRegisters state'', 
+        s1 ++ s2 ++ " (" ++ (operator op) ++ " " ++ (register (nextRegister state''))
+        ++ " " ++ (register r1) ++ " " ++ (register r2) ++ ") ")
 
 
-assignId :: ID -> Expression -> State -> (State, String)
-assignId id' (IDExpression id'') state 
-     = let r = nextRegister state in
-           (updateRegisters state, (loadVarIntoReg r id') ++ (storeInVar id'' r))
 
+operator :: Op -> String
+operator Plus        = "add"
+operator Minus       = "sub"
+operator Divide      = "div"
+operator Multiply    = "mul"
+operator GreaterThan = "gt"
+operator LessThan    = "lt"
+operator Equals      = "eq"
 
-assignFunc :: ID -> Expression -> State -> (State, String)
-assignFunc id' (FunctionExpression id'' (Arguments args)) state 
-     = let (state', str) = (bind (loadArgs args state) (callFunc id'' args)) in 
-           (state', str ++ (storeInVar id'' (prevRegister state')))
-
+----call function helper functions-----
 
 loadArgs :: [ID] -> State -> (State, String)
 loadArgs [] state           = (state, "")
@@ -107,27 +121,6 @@ listRegisters lo hi
             "" (unfoldr (\(l,h) 
                     -> if (l <= h) then Just (("r" ++ (show l)), (l+1,h)) else Nothing) 
                (lo,hi)) 
-
-
---- this generates redundant (st id' <REG>) expressions.
---- work out how to remove these if time allows...
-assignOp :: ID -> Expression -> State -> (State, String)
-assignOp id'@(ID id) (OperatorExpression exp1 op exp2) state
-  = let (state'@(Used b1 (Registers r1)), s1) = (assign id' exp1 state)
-        (state''@(Used b2 (Registers r2)), s2) = (assign id' exp2 state')
-    in (updateRegisters state'', 
-        s1 ++ s2 ++ " (" ++ (operator op) ++ " " ++ (register (nextRegister state''))
-        ++ " " ++ (register r1) ++ " " ++ (register r2) ++ ") ")
-
-
-operator :: Op -> String
-operator Plus        = "add"
-operator Minus       = "sub"
-operator Divide      = "div"
-operator Multiply    = "mul"
-operator GreaterThan = "gt"
-operator LessThan    = "lt"
-operator Equals      = "eq"
 
 
 
