@@ -1,0 +1,22 @@
+FUNCTION factorial(n)
+VARS cond, tmp;
+BEGIN
+  cond = (n == 0);
+  IF cond THEN
+  BEGIN
+    tmp = 1;
+  END
+  ELSE
+  BEGIN
+    tmp = (n - 1);
+    tmp = (factorial(tmp) * n);
+  END;
+  RETURN tmp;
+END
+
+FUNCTION main(n)
+VARS tmp;
+BEGIN
+  tmp = factorial(n);
+  RETURN tmp;
+END

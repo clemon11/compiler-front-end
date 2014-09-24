@@ -69,7 +69,11 @@ returnId id' state
 
 ifThenElse :: ID -> Statements -> Statements -> State -> (State, String)
 ifThenElse id ss1 ss2 state 
-   = bind (bind (bind (bind (state, "") (condition id)) (branch ss1)) (branch ss2)) endIf
+   = let (state', ifcode) = (bind (bind (state, "") (condition id)) (branch ss1))
+         (state'', elsecode) = (branch ss2 state')
+         (state''', endBranch) = branchOut state''
+    in bind (state''', (ifcode ++ endBranch ++ elsecode ++ endBranch)) 
+       endIf
 
 
 condition :: ID -> State -> (State, String)
@@ -82,13 +86,21 @@ condition id' state
 
 
 branch :: Statements -> State -> (State, String)
-branch (Statements ss) state 
+branch (Statements ss) state
   = (updateBlocks state, 
-     "(" ++ (show (nextBlock state)) ++ newBlockWhitespace ++ (trimLeadingWhitespace (trimNewline (statements state ss))) ++ " " ++ endBranchCond)
+     "(" ++ (show (nextBlock state)) ++ newBlockWhitespace ++ (trimLeadingWhitespace (statements state ss)))
 
 
 endIf :: State -> (State, String)
-endIf state = (updateBlocks state, "(" ++ (show (nextBlock state)) ++ "   ")
+endIf state = (updateBlocks state, "(" ++ (show (nextBlock state)))
+
+
+branchOut :: State -> (State, String)
+branchOut state 
+   = let zero = NumExpression (Number 0)
+         b = nextBlock state
+   in bind (processExpression (OperatorExpression zero Equals zero) state) (\s -> (s, beginInstr ++ "br " ++ (register (prevRegister s)) ++ " " ++ (show b) ++ " " ++ (show b) ++ ")" ++ endBranchCond))
+-- branch <TRUE THING> <endIf block> <endIf block> (is it okay to branch to the same block?)
 
 
 

@@ -68,9 +68,16 @@ def p_id_list(p):
 
 
 def p_blocks(p):
-    '''blocks : LPAREN NUM instructions RPAREN
+    '''blocks : LPAREN NUM RPAREN
+              | LPAREN NUM instructions RPAREN
               | LPAREN NUM instructions RPAREN blocks'''
-    p[0] = [program.Block(p[2], p[3])]
+    # Check for an empty block.
+    if len(p[1:]) == 3:
+        p[0] = [program.Block(p[2], [])]
+    else:
+        p[0] = [program.Block(p[2], p[3])]
+
+    # Check for additional blocks after this one.
     if len(p[1:]) == 5:
         p[0] += p[5]
 
