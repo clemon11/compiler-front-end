@@ -13,16 +13,15 @@ import Data.Char (isSpace) -- for stripping leading whitespace
 
 generateIntermediate :: Program -> String
 generateIntermediate (Program fs) 
-   = "( " ++ (trimLeadingWhitespace 
+   = beginProg ++ (trimAll 
                 (foldr (\(Function (ID id) a v (Statements ss)) 
-                     -> (++) ("  (" ++ id ++ "(" ++ (arguments a) ++ ")\n    (0" ++ newBlockWhitespace 
-                              ++ (trimLeadingWhitespace (statements (Used (Blocks 0) (Registers 0)) ss)) 
-                              ++ " ) )\n" )) 
-                "" fs)) ++ ")"
+                            -> (++) (beginFunc ++ id ++ (arguments a) ++ "\n    (0" ++ newBlockWhitespace 
+                                     ++ (trimAll (statements (Used (Blocks 0) (Registers 0)) ss)) ++ endFunc )) 
+                       "" fs)) ++ endProg
 
 
 arguments :: Arguments -> String
-arguments (Arguments as) = dropWhile isSpace (foldr (\(ID a) -> (++) (" " ++ a)) "" as)
+arguments (Arguments as) = "(" ++ dropWhile isSpace (foldr (\(ID a) -> (++) (" " ++ a)) "" as) ++ ")"
 
 
 statements :: State -> [Statement] -> String
@@ -82,7 +81,7 @@ condition id' state
         b2 = b1 + 1
         r  = nextRegister state
     in (updateRegisters state,
-        (loadVarIntoReg r id') ++ beginInstr ++ "br " ++ (register r) ++ " " ++ (show b1) ++ " " ++ (show b2) ++ ") " ++ endBranchCond)
+        (loadVarIntoReg r id') ++ beginInstr ++ "br " ++ (register r) ++ " " ++ (show b1) ++ " " ++ (show b2) ++ ")" ++ endBranchCond)
 
 
 branch :: Statements -> State -> (State, String)
@@ -100,7 +99,6 @@ branchOut state
    = let zero = NumExpression (Number 0)
          b = nextBlock state
    in bind (processExpression (OperatorExpression zero Equals zero) state) (\s -> (s, beginInstr ++ "br " ++ (register (prevRegister s)) ++ " " ++ (show b) ++ " " ++ (show b) ++ ")" ++ endBranchCond))
--- branch <TRUE THING> <endIf block> <endIf block> (is it okay to branch to the same block?)
 
 
 
@@ -163,20 +161,36 @@ operator Equals      = "eq"
 
 ----------------------common instructions-------------------------
 
+endProg :: String
+endProg = " )"
+
+
+endFunc :: String
+endFunc = " ) )\n" 
+
+
 endInstr :: String
-endInstr = ")\n     "
+endInstr = ")\n      "
 
 
 endBranchCond :: String
-endBranchCond = ")\n    "
+endBranchCond = " )\n    "
+
+
+beginProg :: String
+beginProg = "( "
+
+
+beginFunc :: String
+beginFunc = "  ("
 
 
 beginInstr :: String
-beginInstr = "    ("
+beginInstr = "     ("
 
 
 newBlockWhitespace :: String
-newBlockWhitespace = "   "
+newBlockWhitespace = "     "
 
 
 register :: Integer -> String
@@ -201,3 +215,6 @@ trimNewline s = (reverse . dropWhile (=='\n') . reverse) ((reverse . dropWhile (
 
 trimLeadingWhitespace :: String -> String
 trimLeadingWhitespace = dropWhile (==' ')
+
+trimAll :: String -> String
+trimAll s = trimNewline (trimLeadingWhitespace s)
