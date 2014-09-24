@@ -110,7 +110,9 @@ def p_instruction(p):
 def p_reg_list(p):
     '''reg_list : empty
                 | REG reg_list'''
-    p[0] = [i for i in p[1:] if i is not None and i != []]
+    p[0] = [p[1]]
+    if len(p[1:]) == 2 and p[2] != [None]:
+        p[0] += p[2]
 
 
 def p_empty(p):
