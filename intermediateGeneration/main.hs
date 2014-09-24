@@ -10,7 +10,7 @@ main = do
          programText <- readFile fileIn 
          
          --Runs the parser and semantics check, then if they succeed can run the intermediate code generator
-         putStrLn (generateCode programText)
+         writeFile fileOut (generateCode programText)
          
 
 

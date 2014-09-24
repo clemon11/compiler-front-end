@@ -1,0 +1,1 @@
+( (main (arg1 arg2) (0 (ld r1 arg1)  (st var1 r1) ) ) )
