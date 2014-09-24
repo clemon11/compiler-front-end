@@ -10,12 +10,15 @@ main = do
          programText <- readFile fileIn 
          
          --Runs the parser and semantics check, then if they succeed can run the intermediate code generator
-         writeFile fileOut (generateCode programText)
          
+         case generateCode programText of 
+              Left error -> putStrLn error
+              Right code -> writeFile fileOut code
 
 
-generateCode :: String -> String    
+generateCode :: String -> Either String String   
 generateCode text = case checkSemantics (parseProgram text) of 
-               Left error -> show error 
-               Right ast -> generateIntermediate ast
+               Left error -> Left error 
+               Right ast -> Right (generateIntermediate ast)
                
+ 
