@@ -67,19 +67,13 @@ returnId id' state
 ifThenElse :: ID -> Statements -> Statements -> State -> (State, String)
 ifThenElse id ss1 ss2 state
    = let b1                  = nextBlock state
-         (state', ifcode)    = branch ss1 state
-         b2                  = nextBlock state'
-         (state'', elsecode) = branch ss2 state'
-         (state''', end)     = branchOut state''
-     in bind (bind (condition b1 b2 id state''') 
-             (\s -> (s, (ifcode ++ end ++ elsecode ++ end)))) endIf
-
- 
---   = let (state', ifcode) = (bind (bind (state, "") (condition id)) (branch ss1))
---         (state'', elsecode) = (branch ss2 state')
---         (state''', endBranch) = branchOut state''
---    in bind (state''', (ifcode ++ endBranch ++ elsecode ++ endBranch)) 
---       endIf
+         (state1, ifcode)    = branch ss1 state
+         (state2, endif)     = branchOut state1
+         b2                  = nextBlock state2
+         (state3, elsecode)  = branch ss2 state2
+         (state4, endelse)   = branchOut state3
+     in bind (bind (condition b1 b2 id state4) 
+             (\s -> (s, (ifcode ++ endif ++ elsecode ++ endelse)))) endIf
 
 
 condition :: Integer -> Integer -> ID -> State -> (State, String)
@@ -93,9 +87,6 @@ branch :: Statements -> State -> (State, String)
 branch (Statements ss) state
   = bind (updateBlocks state, "(" ++ (show (nextBlock state)) ++ newBlockWhitespace) 
          (statements ss)
-
---(updateBlocks state, 
---     "(" ++ (show (nextBlock state)) ++ newBlockWhitespace ++ (trimLeadingWhitespace (statements state ss)))
 
 
 endIf :: State -> (State, String)

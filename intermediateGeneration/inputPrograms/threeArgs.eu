@@ -1,6 +1,14 @@
-FUNCTION main(n1,n2,n3)
+FUNCTION foo(n1,n2,n3)
 VARS tmp;
 BEGIN
   tmp = n1;
+  RETURN tmp;
+END
+
+
+FUNCTION main(n1,n2,n3)
+VARS tmp;
+BEGIN
+  tmp = foo(n1,n2,n3);
   RETURN tmp;
 END
