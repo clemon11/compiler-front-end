@@ -1,0 +1,23 @@
+FUNCTION areSorted(n1, n2, n3)
+VARS cond1, cond2, true, false;
+BEGIN
+  true = 1;
+  false = 0;
+  cond1 = (n1 < n2);
+  IF cond1 THEN
+  BEGIN
+    cond2 = (n2 < n3);
+    IF cond2 THEN
+    BEGIN
+      RETURN true;
+    END;
+  END;
+  RETURN false;
+END
+
+FUNCTION main(n1, n2, n3)
+VARS tmp;
+BEGIN
+  tmp = areSorted(n1, n2, n3);
+  RETURN tmp;
+END

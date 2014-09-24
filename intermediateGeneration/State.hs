@@ -15,8 +15,14 @@ data State = Used UsedBlocks UsedRegisters
 updateBlocks :: State -> State
 updateBlocks (Used (Blocks b) r') = (Used (Blocks (b + 1)) r')
 
+updateManyBlocks :: Integer -> State -> State
+updateManyBlocks n (Used (Blocks b) r') = (Used (Blocks (b + n)) r')
+
 updateRegisters :: State -> State
 updateRegisters (Used b' (Registers r)) = (Used b' (Registers (r + 1)))
+
+updateManyRegisters :: Integer -> State -> State
+updateManyRegisters n (Used b' (Registers r)) = (Used b' (Registers (n + 1)))
 
 -- next unassigned register
 nextRegister :: State -> Integer
