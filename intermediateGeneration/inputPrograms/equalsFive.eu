@@ -1,0 +1,6 @@
+FUNCTION main(n)
+VARS tmp;
+BEGIN
+    tmp = ((n == 5) == 1);
+    RETURN tmp;
+END

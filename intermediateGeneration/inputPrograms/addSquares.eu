@@ -1,0 +1,22 @@
+FUNCTION square(n)
+VARS tmp;
+BEGIN
+  tmp = (n * n);
+  RETURN tmp;
+END
+
+FUNCTION sum(n1,n2)
+VARS tmp;
+BEGIN
+  tmp = (n1 + n2);
+  RETURN tmp;
+END
+
+FUNCTION main(n1,n2)
+VARS tmp, sqr1, sqr2;
+BEGIN
+  sqr1 = square(n1);
+  sqr2 = square(n2);
+  tmp = sum(sqr1,sqr2);
+  RETURN tmp;
+END
