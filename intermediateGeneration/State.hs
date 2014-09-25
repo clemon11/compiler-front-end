@@ -12,29 +12,32 @@ data UsedRegisters = Registers Integer
 data State = Used UsedBlocks UsedRegisters
   deriving Show
 
-updateBlocks :: State -> State
-updateBlocks (Used (Blocks b) r') = (Used (Blocks (b + 1)) r')
+newState :: State
+newState = (Used (Blocks 0) (Registers 0))
 
-updateManyBlocks :: Integer -> State -> State
-updateManyBlocks n (Used (Blocks b) r') = (Used (Blocks (b + n)) r')
+updtBlks :: State -> State
+updtBlks (Used (Blocks b) r') = (Used (Blocks (b + 1)) r')
 
-updateRegisters :: State -> State
-updateRegisters (Used b' (Registers r)) = (Used b' (Registers (r + 1)))
+updtManyBlks :: Integer -> State -> State
+updtManyBlks n (Used (Blocks b) r') = (Used (Blocks (b + n)) r')
 
-updateManyRegisters :: Integer -> State -> State
-updateManyRegisters n (Used b' (Registers r)) = (Used b' (Registers (n + 1)))
+updtRegs :: State -> State
+updtRegs (Used b' (Registers r)) = (Used b' (Registers (r + 1)))
+
+updtManyRegs :: Integer -> State -> State
+updtManyRegs n (Used b' (Registers r)) = (Used b' (Registers (n + 1)))
 
 -- next unassigned register
-nextRegister :: State -> Integer
-nextRegister (Used b' (Registers r)) = r + 1
+nxtReg :: State -> Integer
+nxtReg (Used b' (Registers r)) = r + 1
 
 -- most recently assigned register
-prevRegister :: State -> Integer
-prevRegister (Used b' (Registers r)) = r
+prvReg :: State -> Integer
+prvReg (Used b' (Registers r)) = r
 
 -- next unassigned block
-nextBlock :: State -> Integer
-nextBlock (Used (Blocks b) r') = b + 1
+nxtBlk :: State -> Integer
+nxtBlk (Used (Blocks b) r') = b + 1
 
 -- I don't know why I wrote a bind function. It seemed like a good idea at the time
 bind :: (State, String) -> (State -> (State, String)) -> (State, String)
