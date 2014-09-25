@@ -124,7 +124,7 @@ def p_error(p):
     raise ParseError(p.type, p.lexpos)
 
 # Create the parser from the given rules.
-yacc.yacc()
+yacc.yacc(debug=0, write_tables=0)
 
 
 def parse(source):
