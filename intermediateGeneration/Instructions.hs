@@ -51,3 +51,8 @@ ldCnst r (Number n) = bgnInstr ++ "lc " ++ (reg r) ++ " " ++ (show n) ++ endInst
 store :: ID -> Integer -> String
 store (ID id) r = bgnInstr ++ "st " ++ id ++ " " ++ (reg r) ++ endInstr
 
+
+brn :: Integer -> Integer -> Integer -> String
+brn b1 b2 r
+    = bgnInstr ++ "br " ++ (reg r) ++ " " ++ (show b1)
+      ++ " " ++ (show b2) ++ ")" ++ endBrchCnd
