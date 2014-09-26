@@ -1,0 +1,11 @@
+COMP3109 Assignment 2
+Caitlin Mangan, Jacqueline Leykam, Renee Noble
+----------------------------------------------
+
+Parts 1 and 2 are a single program, found in the intermediateGeneration folder.
+The program is written in Haskell, requires the 'parsec' package and was tested
+with GHC 7.8.3 and parsec 3.1.5.
+
+Part 2 can be found in the interpreter folder. It is written in Python 2.7.8
+and requires the 'PLY' (Python Lex-Yacc) package version 3.4 (already installed
+on the ucpu machines).
